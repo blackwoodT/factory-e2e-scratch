@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "_purpose": "Configuration + runtime state for the automated factory loop (docs/workflow/automation.md). The template ships with enabled=false; enabling is a per-project step. In an armed project the workflows persist the mutable `runtime` block on the unprotected `factory-state` branch, never on protected main.",
-  "enabled": false,
+  "enabled": true,
   "limits": {
     "max_steps_per_day": 40,
     "fix_loop_threshold": 3,
