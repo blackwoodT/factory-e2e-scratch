@@ -23,13 +23,18 @@
   "runtime": {
     "_comment": "Mutable loop state written by scripts/factory/dispatch.py; do not hand-edit except to recover.",
     "paused_until": null,
-    "pause_reason": null,
+    "pause_reason": "agent_failure",
     "active_ticket": null,
     "active_ticket_branch": null,
-    "steps_date": null,
-    "steps_today": 0,
-    "gate_fingerprint": "-|idle|-",
-    "gate_issue": 2,
-    "last_step": null
+    "steps_date": "2026-06-12",
+    "steps_today": 1,
+    "gate_fingerprint": null,
+    "gate_issue": 5,
+    "last_step": {
+      "at": "2026-06-12T03:45:12Z",
+      "ticket": "",
+      "role": "architect",
+      "reason": "architect"
+    }
   }
 }
