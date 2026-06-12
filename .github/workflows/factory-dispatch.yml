@@ -207,11 +207,15 @@ jobs:
             exit 0
           fi
           # shellcheck disable=SC2086  # extra args are intentionally word-split
+          # Prompt goes via stdin: --allowedTools is variadic and would consume
+          # a trailing positional prompt as another tool name (then claude
+          # exits with "Input must be provided either through stdin or as a
+          # prompt argument when using --print").
           claude -p --output-format json --max-turns "$MAX_TURNS" \
             ${ALLOWED_TOOLS:+--allowedTools "$ALLOWED_TOOLS"} \
             ${CLAUDE_MODEL:+--model "$CLAUDE_MODEL"} \
             $CLAUDE_EXTRA_ARGS \
-            "$(cat "$RUNNER_TEMP/factory-prompt.txt")" \
+            < "$RUNNER_TEMP/factory-prompt.txt" \
             > "$RUNNER_TEMP/agent-out.json" 2> "$RUNNER_TEMP/agent-err.log"
           STATUS=$?
           set -e
