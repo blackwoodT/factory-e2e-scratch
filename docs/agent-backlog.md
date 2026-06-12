@@ -16,7 +16,7 @@ downstream product backlog.
 
 | Ticket | Title | Stage | Next actor | Notes |
 |---|---|---|---|---|
-| _none yet_ | | | | |
+| TKT-000 | Hello Factory CLI | planned | orchestrator | Architect bootstrap complete 2026-06-12. Implement src/hello_factory.py, tests/test_hello_factory.py, README note. Standard tier. Branch: tkt-000/hello-factory-cli. |
 
 ## Done
 

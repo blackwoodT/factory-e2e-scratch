@@ -1,0 +1,151 @@
+{
+  "schema_version": "1.0",
+  "project": "Factory E2E",
+  "ticket_id": "TKT-000",
+  "ticket_type": "primary",
+  "parent_ticket": null,
+  "specialist": null,
+  "title": "Hello Factory CLI",
+  "branch": "tkt-000/hello-factory-cli",
+  "repo_root": "/home/runner/work/factory-e2e-scratch/factory-e2e-scratch",
+  "backlog_path": "docs/agent-backlog.md",
+  "specification_path": ".Context/FactoryE2E-Specification.md",
+  "stage": "planned",
+  "next_actor": "orchestrator",
+  "status": "active",
+  "execution_mode": "standard",
+  "waiting_on": "orchestrator",
+  "summary": "Implement src/hello_factory.py (prints 'Hello from the Factory E2E project', exits 0), tests/test_hello_factory.py (pytest assertion on output), and a one-line usage note in README.md.",
+  "done_definition": [
+    "src/hello_factory.py exists and prints exactly 'Hello from the Factory E2E project' when run with `python src/hello_factory.py`",
+    "Script exits 0",
+    "pytest tests/test_hello_factory.py passes",
+    "README.md contains a one-line usage note"
+  ],
+  "acceptance_criteria": [
+    "src/hello_factory.py prints exactly 'Hello from the Factory E2E project' and exits 0",
+    "tests/test_hello_factory.py asserts the expected output using pytest",
+    "README.md has a one-line usage note appended",
+    "No external dependencies beyond Python stdlib (production code) and pytest (tests)"
+  ],
+  "validation": {
+    "required": [
+      "python src/hello_factory.py — prints exact string, exits 0",
+      "pytest tests/test_hello_factory.py — passes"
+    ],
+    "contract": {
+      "static": [],
+      "tests": [
+        "pytest tests/test_hello_factory.py"
+      ],
+      "build": [],
+      "runtime_smoke": [
+        "python src/hello_factory.py — verify output and exit code"
+      ],
+      "domain": []
+    },
+    "performed": [],
+    "evidence": [],
+    "status": "not_run",
+    "notes": "Validation contract to be finalized by orchestrator during Planning Pass."
+  },
+  "notes_to_preserve_for_orchestrator": [
+    "Review tier: standard (two required review passes). Source code and tests cannot qualify for light tier per docs/workflow/review-tiers.md. Build request mentions 'light tier' but its success criterion shows two review passes, which is standard.",
+    "pytest may need installation: verify with `pytest --version` and install with `pip install pytest` if absent.",
+    "src/ directory may not exist: implementer creates it if absent.",
+    "Observability/logging are not applicable for this minimal throwaway script per Specification §5 and §11.",
+    "Non-goals: no CI changes, no edits to factory/workflow files or .roles/."
+  ],
+  "carry_forward_notes": [],
+  "deferred_follow_up": [],
+  "pull_request": {
+    "number": null,
+    "url": null,
+    "head_sha": null,
+    "status": "not_created"
+  },
+  "review": {
+    "outcome": "pending",
+    "summary": "",
+    "risk_plan": [],
+    "fix_loop_count": 0,
+    "current_pass": null,
+    "required_passes": [
+      {
+        "id": "review-1",
+        "tool": "claude-code",
+        "status": "pending",
+        "head_sha": null,
+        "outcome": null,
+        "review_ref": null,
+        "notes": ""
+      },
+      {
+        "id": "review-2",
+        "tool": "codex-ide",
+        "status": "pending",
+        "head_sha": null,
+        "outcome": null,
+        "review_ref": null,
+        "notes": ""
+      }
+    ],
+    "findings": [],
+    "non_blocking_observations": []
+  },
+  "handoff": {
+    "from": "architect",
+    "to": "orchestrator",
+    "reason": "Architect bootstrap complete. TKT-000 planned; orchestrator Planning Pass is next."
+  },
+  "history": [
+    {
+      "stage": "planned",
+      "actor": "architect",
+      "timestamp": "2026-06-12",
+      "note": "Architect bootstrap complete. Specification, roadmap, architecture contract, and ticket created. Handing off to orchestrator for Planning Pass."
+    }
+  ],
+  "prompt_handoff": {
+    "schema_version": "1.0",
+    "required_fields": [
+      "ticket_id",
+      "stage",
+      "next_actor",
+      "mode",
+      "source_of_truth",
+      "objective",
+      "scope_in",
+      "scope_out",
+      "state_updates_required",
+      "deliverables",
+      "validation_required",
+      "acceptance_criteria_to_check",
+      "review_risk_plan",
+      "validation_contract",
+      "required_review_passes",
+      "blocker_protocol",
+      "output_contract"
+    ],
+    "notes": "Standard Prompt Packet. See orchestrator.md for the Next Agent Prompt section."
+  },
+  "ai_usage": {
+    "schema_version": "1.0",
+    "currency": "USD",
+    "entries": [
+      {
+        "workflow_event": "architect_bootstrap",
+        "actor": "architect",
+        "tool": "Claude Code",
+        "model": "claude-sonnet-4-6",
+        "source": "not_available",
+        "confidence": "unknown",
+        "notes": "Automated factory run (github-actions); tool-reported usage appended by factory harness after this run. Per workflow-reference.md automation-first capture rule, usage is recorded as not_available for the architect pass and will be updated by the harness."
+      }
+    ],
+    "ticket_total_tokens": 0,
+    "ticket_total_estimated_usd": 0,
+    "ticket_total_confidence": "unknown",
+    "prices_as_of": null
+  }
+}
