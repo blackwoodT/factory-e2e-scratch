@@ -1,0 +1,31 @@
+{
+  "event_name": "issue_comment",
+  "event": {
+    "comment": {
+      "body": "/factory build",
+      "author_association": "OWNER"
+    },
+    "issue": {
+      "number": 3,
+      "state": "open",
+      "title": "Build a todo app",
+      "body": "### Requirements\nA small todo app with auth.",
+      "labels": [
+        {
+          "name": "factory:build-request"
+        }
+      ]
+    }
+  },
+  "expected": {
+    "action": "run_agent",
+    "reason": "architect",
+    "role": "architect",
+    "prompt_context": {
+      "build_request_issue": 3,
+      "build_request_title": "Build a todo app",
+      "build_request_text": "### Requirements\nA small todo app with auth."
+    }
+  },
+  "now": "2026-06-12T00:00:00Z"
+}

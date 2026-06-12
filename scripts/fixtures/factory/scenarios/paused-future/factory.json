@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "enabled": true,
+  "limits": {
+    "max_steps_per_day": 40,
+    "fix_loop_threshold": 3,
+    "default_pause_minutes": 90,
+    "claude_max_turns": 60
+  },
+  "review_2": {
+    "mode": "auto"
+  },
+  "notifications": {
+    "ntfy_enabled": true
+  },
+  "runtime": {
+    "paused_until": "2026-06-12T08:00:00Z",
+    "pause_reason": "usage_limit",
+    "active_ticket": null,
+    "active_ticket_branch": null,
+    "steps_date": null,
+    "steps_today": 0,
+    "gate_fingerprint": null,
+    "gate_issue": null,
+    "last_step": null
+  }
+}

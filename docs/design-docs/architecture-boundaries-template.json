@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0",
+  "template_only": true,
+  "source_contract": "docs/design-docs/architecture-contract.md",
+  "description": "Template only. Downstream projects must replace every example boundary, path, dependency pattern, and edge rule with project-specific architecture policy before setting template_only to false.",
+  "coverage_notes": [
+    "List which architecture-contract dependency rules this config enforces mechanically.",
+    "List any architecture-contract rules that remain docs-only or manual-review-only."
+  ],
+  "boundaries": [
+    {
+      "id": "example-interface-replace",
+      "paths": [
+        "replace/with/project/interface/path/**"
+      ],
+      "notes": "Example only. Replace with a project-specific boundary name and path glob."
+    },
+    {
+      "id": "example-core-replace",
+      "paths": [
+        "replace/with/project/core/path/**"
+      ],
+      "notes": "Example only. Replace with a project-specific boundary name and path glob."
+    }
+  ],
+  "dependency_patterns": [
+    {
+      "id": "example-dependency-marker-replace",
+      "regex": "replace-with-project-specific-regex-containing-a-named-target-group-(?P<target>.+)",
+      "notes": "Example only. Configure one or more patterns for the project's dependency syntax, or replace this scaffold with a project-specific adapter. The named group must be called target."
+    }
+  ],
+  "allowed_edges": [
+    {
+      "id": "example-allowed-edge-replace",
+      "from": "example-interface-replace",
+      "to": "example-core-replace",
+      "reason": "Example only. Replace with a project-specific reason from the generated architecture contract.",
+      "remediation": "Example only. Explain how agents should route this dependency when a violation is found."
+    }
+  ],
+  "forbidden_edges": [
+    {
+      "id": "example-forbidden-edge-replace",
+      "from": "example-core-replace",
+      "to": "example-interface-replace",
+      "reason": "Example only. Replace with a project-specific boundary rule from the generated architecture contract.",
+      "remediation": "Example only. Move the dependency behind an allowed interface, or update the architecture contract and this config if the policy changed."
+    }
+  ],
+  "ignored_dependencies": [
+    {
+      "from": "example-interface-replace",
+      "to": "example-core-replace",
+      "dependency": "replace/with/narrow/generated-or-approved-exception/**",
+      "reason": "Example only. Use narrow ignores with a documented reason and owner."
+    }
+  ]
+}

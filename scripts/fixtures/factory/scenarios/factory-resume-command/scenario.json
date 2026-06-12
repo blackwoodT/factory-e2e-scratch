@@ -1,0 +1,30 @@
+{
+  "event_name": "issue_comment",
+  "event": {
+    "comment": {
+      "body": "/factory resume",
+      "author_association": "OWNER"
+    },
+    "issue": {
+      "number": 12,
+      "state": "open",
+      "labels": [
+        {
+          "name": "factory:needs-you"
+        }
+      ]
+    }
+  },
+  "expected": {
+    "action": "run_agent",
+    "reason": "planning",
+    "ticket": "TKT-001",
+    "close_gate": "12"
+  },
+  "expected_runtime": {
+    "pause_reason": null,
+    "paused_until": null,
+    "gate_issue": null
+  },
+  "now": "2026-06-12T00:00:00Z"
+}

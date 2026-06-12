@@ -1,0 +1,10 @@
+{
+  "event_name": "repository_dispatch",
+  "expected": {
+    "action": "run_agent",
+    "role": "sec-specialist",
+    "ticket": "TKT-002.SEC-01",
+    "reason": "implement"
+  },
+  "now": "2026-06-12T00:00:00Z"
+}

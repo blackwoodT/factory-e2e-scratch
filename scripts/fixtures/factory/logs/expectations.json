@@ -1,0 +1,35 @@
+{
+  "_now": "2026-06-12T00:00:00Z",
+  "_default_pause_minutes": 90,
+  "claude-usage-limit-epoch.log": {
+    "limit_detected": true,
+    "paused_until": "2026-06-12T05:00:00Z",
+    "matched": "epoch_after_pipe"
+  },
+  "claude-usage-limit-clock.log": {
+    "limit_detected": true,
+    "paused_until": "2026-06-12T03:00:00Z",
+    "matched": "clock_time"
+  },
+  "codex-usage-limit-relative.log": {
+    "limit_detected": true,
+    "paused_until": "2026-06-12T02:13:00Z",
+    "matched": "relative_time"
+  },
+  "rate-limit-429.log": {
+    "limit_detected": true,
+    "paused_until": "2026-06-12T00:10:00Z",
+    "matched": "retry_after_seconds"
+  },
+  "limit-no-time.log": {
+    "limit_detected": true,
+    "paused_until": "2026-06-12T01:30:00Z",
+    "matched": "default_pause"
+  },
+  "clean-failure.log": {
+    "limit_detected": false
+  },
+  "incidental-429-not-a-limit.log": {
+    "limit_detected": false
+  }
+}

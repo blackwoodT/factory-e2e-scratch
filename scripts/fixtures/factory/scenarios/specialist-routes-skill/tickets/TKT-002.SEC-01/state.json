@@ -1,0 +1,93 @@
+{
+  "schema_version": "1.0",
+  "project": "Fixture Project",
+  "ticket_id": "TKT-002.SEC-01",
+  "ticket_type": "specialist",
+  "parent_ticket": "TKT-002",
+  "specialist": {
+    "type": "sec",
+    "skill": "$sec-specialist",
+    "agent": "claude",
+    "reason": "Security-sensitive slice"
+  },
+  "title": "Fixture ticket TKT-002.SEC-01",
+  "branch": "tkt-002-sec-01-fixture",
+  "repo_root": "/fixture",
+  "backlog_path": "docs/agent-backlog.md",
+  "stage": "planned",
+  "next_actor": "implementer",
+  "status": "active",
+  "execution_mode": "standard",
+  "waiting_on": "implementer",
+  "summary": "Fixture slice for dispatcher routing tests.",
+  "done_definition": [
+    "fixture"
+  ],
+  "acceptance_criteria": [
+    "fixture"
+  ],
+  "validation": {
+    "required": [],
+    "contract": {
+      "static": [],
+      "tests": [],
+      "build": [],
+      "runtime_smoke": [],
+      "domain": []
+    },
+    "performed": [],
+    "evidence": [],
+    "status": "not_run",
+    "notes": ""
+  },
+  "notes_to_preserve_for_orchestrator": [],
+  "carry_forward_notes": [],
+  "deferred_follow_up": [],
+  "pull_request": {
+    "number": null,
+    "url": null,
+    "head_sha": null,
+    "status": "not_created"
+  },
+  "review": {
+    "outcome": "pending",
+    "summary": "",
+    "risk_plan": [],
+    "fix_loop_count": 0,
+    "current_pass": null,
+    "required_passes": [
+      {
+        "id": "review-1",
+        "tool": "claude-code",
+        "status": "pending",
+        "head_sha": null,
+        "outcome": null,
+        "review_ref": null,
+        "notes": ""
+      },
+      {
+        "id": "review-2",
+        "tool": "codex-ide",
+        "status": "pending",
+        "head_sha": null,
+        "outcome": null,
+        "review_ref": null,
+        "notes": ""
+      }
+    ],
+    "findings": [],
+    "non_blocking_observations": []
+  },
+  "handoff": {
+    "from": "orchestrator",
+    "to": "implementer",
+    "reason": "Fixture handoff for dispatcher routing tests."
+  },
+  "history": [
+    {
+      "stage": "planned",
+      "actor": "orchestrator",
+      "note": "Fixture history entry."
+    }
+  ]
+}

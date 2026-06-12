@@ -1,0 +1,48 @@
+name: Workflow docs check
+
+on:
+  # No path filters, deliberately: these jobs are meant to be required status
+  # checks (see docs/workflow/github-settings.md). A path-filtered required
+  # check never reports on PRs outside its paths and blocks merging, and path
+  # filters also let policy inputs (e.g. .roles/**) bypass validation. The
+  # jobs take seconds, so they simply run on every PR.
+  pull_request:
+  push:
+    branches: [ main ]
+  # The automated factory pushes ticket branches with GITHUB_TOKEN, which never
+  # triggers pull_request workflows, so factory-dispatch.yml re-dispatches these
+  # required checks on the branch head explicitly (docs/workflow/automation.md).
+  workflow_dispatch:
+
+jobs:
+  check-workflow-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run workflow docs check
+        run: python scripts/check_workflow_docs.py
+
+  check-ticket-state:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validator self-test (fixtures)
+        run: python scripts/validate_ticket_state.py --self-test
+      - name: Validate ticket state files
+        run: python scripts/validate_ticket_state.py
+      - name: Factory dispatcher self-test (fixtures)
+        run: python scripts/factory/dispatch.py self-test
+      - name: Factory limits self-test (fixtures)
+        run: python scripts/factory/limits.py --self-test
+      - name: Factory notify self-test (offline renderer)
+        run: python scripts/factory/notify.py self-test

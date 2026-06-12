@@ -1,0 +1,28 @@
+{
+  "event_name": "issue_comment",
+  "event": {
+    "comment": {
+      "body": "Done \u2014 the database exists now.",
+      "author_association": "OWNER"
+    },
+    "issue": {
+      "number": 12,
+      "state": "open",
+      "labels": [
+        {
+          "name": "factory:needs-you"
+        }
+      ]
+    }
+  },
+  "expected": {
+    "action": "run_agent",
+    "role": "implementer",
+    "ticket": "TKT-003.PREREQ-01",
+    "human_input": "Done \u2014 the database exists now."
+  },
+  "expected_runtime": {
+    "gate_issue": 12
+  },
+  "now": "2026-06-12T00:00:00Z"
+}

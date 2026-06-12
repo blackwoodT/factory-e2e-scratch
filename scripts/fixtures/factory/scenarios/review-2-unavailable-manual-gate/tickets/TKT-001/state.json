@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.0",
+  "project": "Fixture Project",
+  "ticket_id": "TKT-001",
+  "ticket_type": "primary",
+  "parent_ticket": null,
+  "specialist": null,
+  "title": "Fixture ticket TKT-001",
+  "branch": "tkt-001-fixture",
+  "repo_root": "/fixture",
+  "backlog_path": "docs/agent-backlog.md",
+  "stage": "reviewing",
+  "next_actor": "reviewer",
+  "status": "active",
+  "execution_mode": "standard",
+  "waiting_on": "reviewer",
+  "summary": "Fixture slice for dispatcher routing tests.",
+  "done_definition": [
+    "fixture"
+  ],
+  "acceptance_criteria": [
+    "fixture"
+  ],
+  "validation": {
+    "required": [],
+    "contract": {
+      "static": [],
+      "tests": [],
+      "build": [],
+      "runtime_smoke": [],
+      "domain": []
+    },
+    "performed": [],
+    "evidence": [],
+    "status": "passed",
+    "notes": ""
+  },
+  "notes_to_preserve_for_orchestrator": [],
+  "carry_forward_notes": [],
+  "deferred_follow_up": [],
+  "pull_request": {
+    "number": 7,
+    "url": "https://example.test/pr/7",
+    "head_sha": "abc1234",
+    "status": "open"
+  },
+  "review": {
+    "outcome": "in_progress",
+    "summary": "",
+    "risk_plan": [],
+    "fix_loop_count": 0,
+    "current_pass": "review-2",
+    "required_passes": [
+      {
+        "id": "review-1",
+        "tool": "claude-code",
+        "status": "accepted",
+        "head_sha": "abc1234",
+        "outcome": "accepted",
+        "review_ref": "https://example.test/pr/7#r1",
+        "notes": ""
+      },
+      {
+        "id": "review-2",
+        "tool": "codex-ide",
+        "status": "pending",
+        "head_sha": null,
+        "outcome": null,
+        "review_ref": null,
+        "notes": ""
+      }
+    ],
+    "findings": [],
+    "non_blocking_observations": []
+  },
+  "handoff": {
+    "from": "orchestrator",
+    "to": "reviewer",
+    "reason": "Fixture handoff for dispatcher routing tests."
+  },
+  "history": [
+    {
+      "stage": "reviewing",
+      "actor": "orchestrator",
+      "note": "Fixture history entry."
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+# Requirements intake for the automated factory: filing this issue (as a repo
+# collaborator, with the factory enabled) dispatches the architect, which turns
+# it into a specification + roadmap PR for your approval.
+# Operator guide: docs/workflow/automation.md.
+name: Build request
+description: Feed requirements to the factory; the architect turns them into a spec + roadmap PR.
+title: "[Build] "
+labels: ["factory:build-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Rough notes are fine — the architect records unanswerable questions as explicit
+        assumptions in the specification, and you review the result as a normal PR.
+        The factory only acts on issues filed by repository collaborators.
+  - type: textarea
+    id: requirements
+    attributes:
+      label: Requirements
+      description: What should be built? Who uses it? What does success look like?
+      placeholder: |
+        e.g. A small web app where staff log equipment loans. Staff sign in,
+        record a loan against a student, and see what is overdue...
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints and non-goals
+      description: Stack preferences, integrations, things explicitly out of scope.
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Context links
+      description: Existing docs, examples, or prior art the architect should read.
+    validations:
+      required: false

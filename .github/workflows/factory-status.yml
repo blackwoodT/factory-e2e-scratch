@@ -1,0 +1,94 @@
+# Factory status: regenerate the pinned dashboard issue on demand (works from
+# GitHub Mobile via "Run workflow") and as a daily digest. The dispatcher also
+# refreshes the dashboard after every cycle; this workflow is the on-demand /
+# scheduled view. Operator guide: docs/workflow/automation.md.
+name: Factory status
+
+on:
+  workflow_dispatch:
+    inputs:
+      push_summary:
+        description: Also send an ntfy push with the status link
+        type: boolean
+        default: true
+  schedule:
+    # Daily digest at 07:00 UTC (≈ 17:00 AEST); tune per project.
+    - cron: '0 7 * * *'
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: factory-status
+  cancel-in-progress: true
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  factory-status:
+    # Scheduled digests respect the kill switch; an explicit manual dispatch is
+    # human-initiated and read-only, so it may run even while disabled.
+    if: vars.FACTORY_ENABLED == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout (full history; status reads ticket branches)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Overlay factory runtime and active ticket state
+        # Same precedence as factory-dispatch: reviewed config from main wins,
+        # only the runtime block comes from the factory-state branch.
+        run: |
+          STATE_COPY=""
+          if git show-ref --verify -q refs/remotes/origin/factory-state; then
+            if git show origin/factory-state:.ai/factory.json > "$RUNNER_TEMP/factory-state-copy.json" 2>/dev/null; then
+              STATE_COPY="$RUNNER_TEMP/factory-state-copy.json"
+            fi
+          fi
+          python3 scripts/factory/dispatch.py overlay \
+            --config .ai/factory.json \
+            --state "$STATE_COPY" \
+            --out "$RUNNER_TEMP/factory-runtime.json"
+          ACTIVE_BRANCH=$(python3 -c "import json; print(json.load(open('$RUNNER_TEMP/factory-runtime.json')).get('runtime', {}).get('active_ticket_branch') or '')")
+          if [ -n "$ACTIVE_BRANCH" ] && git show-ref --verify -q "refs/remotes/origin/$ACTIVE_BRANCH"; then
+            git checkout "origin/$ACTIVE_BRANCH" -- .ai/tickets/ && echo "Overlaid tickets from $ACTIVE_BRANCH."
+          fi
+
+      - name: Regenerate dashboard issue
+        run: |
+          gh pr list --state open --json number,title,url > "$RUNNER_TEMP/prs.json" || printf '[]' > "$RUNNER_TEMP/prs.json"
+          python3 scripts/factory/notify.py dashboard \
+            --factory-file "$RUNNER_TEMP/factory-runtime.json" \
+            --tickets-dir .ai/tickets \
+            --pr-json "$RUNNER_TEMP/prs.json"
+
+      - name: Push status summary
+        if: github.event_name == 'schedule' || inputs.push_summary
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          DASHBOARD=$(gh issue list --label "factory:dashboard" --state open --json number -q '.[0].number' || echo "")
+          STATE=$(python3 -c "
+          import json
+          f = json.load(open('$RUNNER_TEMP/factory-runtime.json'))
+          r = f.get('runtime', {})
+          bits = ['enabled' if f.get('enabled') else 'disabled']
+          if r.get('pause_reason') or r.get('paused_until'):
+              bits.append('paused: ' + str(r.get('pause_reason') or r.get('paused_until')))
+          bits.append('active: ' + str(r.get('active_ticket') or 'none'))
+          bits.append(f\"steps today: {r.get('steps_today', 0)}\")
+          print('; '.join(bits))
+          ")
+          python3 scripts/factory/notify.py push \
+            --title "Factory status" --message "$STATE" --tags "factory,clipboard" \
+            ${DASHBOARD:+--click "https://github.com/$GITHUB_REPOSITORY/issues/$DASHBOARD"}

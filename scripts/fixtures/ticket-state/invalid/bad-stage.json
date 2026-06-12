@@ -1,0 +1,103 @@
+{
+  "schema_version": "1.0",
+  "project": "fixture-project",
+  "ticket_id": "TKT-001",
+  "ticket_type": "primary",
+  "parent_ticket": null,
+  "specialist": null,
+  "title": "Fixture ticket",
+  "branch": "tkt-001-fixture",
+  "stage": "in_review",
+  "next_actor": "implementer",
+  "status": "active",
+  "execution_mode": "standard",
+  "waiting_on": "implementer",
+  "summary": "Smallest reviewable fixture slice.",
+  "done_definition": [
+    "fixture done"
+  ],
+  "acceptance_criteria": [
+    "fixture accepted"
+  ],
+  "validation": {
+    "required": [
+      "static"
+    ],
+    "contract": {
+      "static": [
+        "echo lint"
+      ]
+    },
+    "performed": [],
+    "evidence": [],
+    "status": "not_run",
+    "notes": ""
+  },
+  "notes_to_preserve_for_orchestrator": [],
+  "pull_request": {
+    "number": null,
+    "url": null,
+    "head_sha": null,
+    "status": "not_created"
+  },
+  "review": {
+    "outcome": "pending",
+    "summary": "",
+    "risk_plan": [
+      "fixture risk"
+    ],
+    "current_pass": null,
+    "required_passes": [
+      {
+        "id": "review-1",
+        "tool": "claude-code",
+        "status": "pending",
+        "head_sha": null,
+        "outcome": null,
+        "review_ref": null,
+        "notes": ""
+      },
+      {
+        "id": "review-2",
+        "tool": "codex-ide",
+        "status": "pending",
+        "head_sha": null,
+        "outcome": null,
+        "review_ref": null,
+        "notes": ""
+      }
+    ],
+    "findings": [],
+    "non_blocking_observations": []
+  },
+  "handoff": {
+    "from": "orchestrator",
+    "to": "implementer",
+    "reason": "Planning pass complete."
+  },
+  "history": [
+    {
+      "stage": "planned",
+      "actor": "orchestrator",
+      "note": "Fixture bootstrap."
+    }
+  ],
+  "ai_usage": {
+    "schema_version": "1.0",
+    "currency": "USD",
+    "entries": [
+      {
+        "workflow_event": "planning",
+        "actor": "orchestrator",
+        "tool": "claude-code",
+        "source": "tool_reported",
+        "confidence": "estimated",
+        "estimated_cost_usd": 0.1
+      }
+    ],
+    "ticket_total_tokens": 0,
+    "ticket_total_estimated_usd": 0.1,
+    "ticket_total_confidence": "partial",
+    "prices_as_of": null
+  }
+}

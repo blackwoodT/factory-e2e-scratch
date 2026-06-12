@@ -1,0 +1,23 @@
+{
+  "event_name": "issue_comment",
+  "event": {
+    "comment": {
+      "body": "Done \u2014 the database exists now.",
+      "author_association": "NONE"
+    },
+    "issue": {
+      "number": 12,
+      "state": "open",
+      "labels": [
+        {
+          "name": "factory:needs-you"
+        }
+      ]
+    }
+  },
+  "expected": {
+    "action": "noop",
+    "reason": "irrelevant_event"
+  },
+  "now": "2026-06-12T00:00:00Z"
+}

@@ -1,0 +1,23 @@
+{
+  "event_name": "pull_request_review",
+  "pr_approval_state": "not_approved",
+  "event": {
+    "review": {
+      "state": "approved",
+      "author_association": "OWNER",
+      "commit_id": "old9999"
+    },
+    "pull_request": {
+      "number": 7,
+      "head": {
+        "sha": "old9999"
+      }
+    }
+  },
+  "expected": {
+    "action": "needs_human",
+    "reason": "approval",
+    "ticket": "TKT-001"
+  },
+  "now": "2026-06-12T00:00:00Z"
+}

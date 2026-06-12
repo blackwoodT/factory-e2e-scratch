@@ -1,0 +1,22 @@
+{
+  "event_name": "pull_request_review",
+  "pr_approval_state": "unknown",
+  "event": {
+    "review": {
+      "state": "approved",
+      "author_association": "OWNER",
+      "user": {
+        "login": "some-bot[bot]",
+        "type": "Bot"
+      }
+    },
+    "pull_request": {
+      "number": 7
+    }
+  },
+  "expected": {
+    "action": "noop",
+    "reason": "irrelevant_event"
+  },
+  "now": "2026-06-12T00:00:00Z"
+}

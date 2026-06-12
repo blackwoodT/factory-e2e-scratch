@@ -1,0 +1,9 @@
+{
+  "event_name": "schedule",
+  "expected": {
+    "action": "needs_human",
+    "reason": "idle",
+    "gate_kind": "idle"
+  },
+  "now": "2026-06-12T00:00:00Z"
+}

@@ -1,0 +1,21 @@
+{
+  "event_name": "issue_comment",
+  "event": {
+    "comment": {
+      "body": "/factory build",
+      "author_association": "OWNER"
+    },
+    "issue": {
+      "number": 5,
+      "state": "open",
+      "title": "Random question",
+      "body": "Why is the sky blue?",
+      "labels": []
+    }
+  },
+  "expected": {
+    "action": "noop",
+    "reason": "command_build_invalid"
+  },
+  "now": "2026-06-12T00:00:00Z"
+}

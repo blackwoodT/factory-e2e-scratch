@@ -1,0 +1,13 @@
+{
+  "event_name": "schedule",
+  "expected": {
+    "action": "run_agent",
+    "ticket": "TKT-003.PREREQ-01",
+    "role": "orchestrator",
+    "reason": "planning"
+  },
+  "expected_runtime": {
+    "active_ticket": "TKT-003.PREREQ-01"
+  },
+  "now": "2026-06-12T00:00:00Z"
+}

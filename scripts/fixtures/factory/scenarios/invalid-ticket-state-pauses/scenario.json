@@ -1,0 +1,12 @@
+{
+  "event_name": "schedule",
+  "expected": {
+    "action": "needs_human",
+    "reason": "invalid_state",
+    "notify_priority": "high"
+  },
+  "expected_runtime": {
+    "pause_reason": "invalid_state"
+  },
+  "now": "2026-06-12T00:00:00Z"
+}

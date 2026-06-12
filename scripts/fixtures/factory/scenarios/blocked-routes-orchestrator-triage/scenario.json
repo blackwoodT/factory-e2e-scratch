@@ -1,0 +1,10 @@
+{
+  "event_name": "schedule",
+  "expected": {
+    "action": "run_agent",
+    "reason": "blocked_triage",
+    "role": "orchestrator",
+    "ticket": "TKT-001"
+  },
+  "now": "2026-06-12T00:00:00Z"
+}

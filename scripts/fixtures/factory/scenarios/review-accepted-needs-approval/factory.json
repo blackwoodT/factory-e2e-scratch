@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "enabled": true,
+  "limits": {
+    "max_steps_per_day": 40,
+    "fix_loop_threshold": 3,
+    "default_pause_minutes": 90,
+    "claude_max_turns": 60
+  },
+  "review_2": {
+    "mode": "auto"
+  },
+  "notifications": {
+    "ntfy_enabled": true
+  },
+  "runtime": {
+    "paused_until": null,
+    "pause_reason": null,
+    "active_ticket": "TKT-001",
+    "active_ticket_branch": "tkt-001-fixture",
+    "steps_date": "2026-06-12",
+    "steps_today": 5,
+    "gate_fingerprint": null,
+    "gate_issue": null,
+    "last_step": {
+      "at": "2026-06-11T23:30:00Z",
+      "ticket": "TKT-001",
+      "role": "reviewer",
+      "reason": "review-2"
+    }
+  }
+}

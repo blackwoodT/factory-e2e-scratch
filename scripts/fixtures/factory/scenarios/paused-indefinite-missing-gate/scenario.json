@@ -1,0 +1,9 @@
+{
+  "event_name": "schedule",
+  "expected": {
+    "action": "needs_human",
+    "reason": "paused",
+    "notify_priority": "high"
+  },
+  "now": "2026-06-12T00:00:00Z"
+}

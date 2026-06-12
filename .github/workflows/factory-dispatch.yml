@@ -1,0 +1,509 @@
+# Factory dispatch: the event-driven loop that replaces the human typing
+# "Proceed" (design: docs/workflow/automation-blueprint.md; operator guide:
+# docs/workflow/automation.md). One run = at most ONE agent step. The
+# dispatcher (scripts/factory/dispatch.py) routes from .ai/factory.json and
+# .ai/tickets/*/state.json; this YAML only performs the side effects.
+#
+# Safety rails wired here:
+# - Kill switch: the job only runs when the repo variable FACTORY_ENABLED is
+#   'true' (plus .ai/factory.json "enabled" checked inside the dispatcher).
+# - Concurrency group 'factory': one step at a time, never cancelled mid-step.
+# - After every agent step the state validator + docs check run; failure
+#   pauses the factory and notifies the human (fail closed).
+# - Mutable runtime state (pauses, budgets, gate bookkeeping) is persisted on
+#   the unprotected 'factory-state' branch, never pushed to protected main.
+name: Factory dispatch
+run-name: "Factory dispatch (${{ github.event_name }})"
+
+on:
+  workflow_dispatch:
+    inputs:
+      resume:
+        description: Clear any factory pause before routing
+        type: boolean
+        default: false
+  repository_dispatch:
+    types: [factory-step]
+  schedule:
+    # Auto-resume after paused_until, catch stalls. GitHub may delay or, on
+    # repos inactive >60 days, disable schedules; any manual dispatch revives the loop.
+    - cron: '*/30 * * * *'
+  issues:
+    # 'opened' only: the issue form applies the build-request label at creation,
+    # so also listening to 'labeled' would double-dispatch the architect for the
+    # same issue. For issues created without the form, comment `/factory build`.
+    types: [opened]
+  issue_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  group: factory
+  cancel-in-progress: false
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  DEFAULT_BRANCH: ${{ github.event.repository.default_branch || 'main' }}
+
+jobs:
+  factory-step:
+    # Kill switch #1: the FACTORY_ENABLED repository variable. Unset (the
+    # template default) or anything but 'true' skips the whole job.
+    if: vars.FACTORY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout (full history; the loop reads ticket branches)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Overlay factory runtime state
+        # Reviewed config on main always wins (e.g. an enabled:false flip must
+        # stop the loop); ONLY the mutable runtime block comes from the
+        # factory-state branch. git show keeps the worktree clean.
+        run: |
+          STATE_COPY=""
+          if git show-ref --verify -q refs/remotes/origin/factory-state; then
+            if git show origin/factory-state:.ai/factory.json > "$RUNNER_TEMP/factory-state-copy.json" 2>/dev/null; then
+              STATE_COPY="$RUNNER_TEMP/factory-state-copy.json"
+            fi
+          fi
+          python3 scripts/factory/dispatch.py overlay \
+            --config .ai/factory.json \
+            --state "$STATE_COPY" \
+            --out "$RUNNER_TEMP/factory-runtime.json"
+          cp "$RUNNER_TEMP/factory-runtime.json" "$RUNNER_TEMP/factory-runtime-orig.json"
+
+      - name: Overlay active ticket branch state
+        # In-flight ticket state lives on the ticket branch until finalization
+        # merges it; routing must see the branch version, not main's.
+        run: |
+          ACTIVE_BRANCH=$(python3 -c "import json; print(json.load(open('$RUNNER_TEMP/factory-runtime.json')).get('runtime', {}).get('active_ticket_branch') or '')")
+          if [ -n "$ACTIVE_BRANCH" ] && git show-ref --verify -q "refs/remotes/origin/$ACTIVE_BRANCH"; then
+            git checkout "origin/$ACTIVE_BRANCH" -- .ai/tickets/ && echo "Overlaid tickets from $ACTIVE_BRANCH."
+          fi
+
+      - name: Capture event payload
+        env:
+          EVENT_JSON: ${{ toJSON(github.event) }}
+        run: printf '%s' "$EVENT_JSON" > "$RUNNER_TEMP/event.json"
+
+      - name: Route next step
+        id: route
+        env:
+          RESUME_INPUT: ${{ inputs.resume }}
+          REVIEW2_AVAILABLE: ${{ (secrets.CODEX_AUTH_JSON != '' || secrets.OPENAI_API_KEY != '') && 'true' || 'false' }}
+        run: |
+          RESUME_FLAG=""
+          [ "$RESUME_INPUT" = "true" ] && RESUME_FLAG="--resume"
+          python3 scripts/factory/dispatch.py route \
+            --factory-file "$RUNNER_TEMP/factory-runtime.json" \
+            --tickets-dir .ai/tickets \
+            --event-name "${{ github.event_name }}" \
+            --event-json "$RUNNER_TEMP/event.json" \
+            --review2-available "$REVIEW2_AVAILABLE" \
+            --prompt-file "$RUNNER_TEMP/factory-prompt.txt" \
+            --gate-body-file "$RUNNER_TEMP/factory-gate-body.md" \
+            $RESUME_FLAG
+
+      - name: Step summary
+        env:
+          SUMMARY: ${{ steps.route.outputs.summary }}
+        run: |
+          {
+            echo "### Factory route"
+            echo "- action: \`${{ steps.route.outputs.action }}\` (${{ steps.route.outputs.reason }})"
+            echo "- ticket: ${{ steps.route.outputs.ticket || 'n/a' }} | role: ${{ steps.route.outputs.role || 'n/a' }} | tool: ${{ steps.route.outputs.tool || 'n/a' }}"
+            echo "- $SUMMARY"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Close resolved gate issue
+        if: steps.route.outputs.close_gate != ''
+        run: |
+          python3 scripts/factory/notify.py close-gate \
+            --issue "${{ steps.route.outputs.close_gate }}" \
+            --comment "Resolved — the factory is continuing."
+
+      # ---------------- Human gate path ----------------
+      - name: Notify human gate
+        if: steps.route.outputs.action == 'needs_human' && steps.route.outputs.duplicate_gate != 'true'
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          GATE_TITLE: ${{ steps.route.outputs.notify_title }}
+          GATE_MESSAGE: ${{ steps.route.outputs.notify_message }}
+          GATE_KIND: ${{ steps.route.outputs.gate_kind }}
+          GATE_PRIORITY: ${{ steps.route.outputs.notify_priority }}
+        run: |
+          python3 scripts/factory/notify.py needs-you \
+            --title "$GATE_TITLE" --message "$GATE_MESSAGE" --kind "$GATE_KIND" \
+            --body-file "$RUNNER_TEMP/factory-gate-body.md" \
+            --record-runtime "$RUNNER_TEMP/factory-runtime.json"
+          GATE_ISSUE=$(python3 -c "import json; print(json.load(open('$RUNNER_TEMP/factory-runtime.json'))['runtime'].get('gate_issue') or '')")
+          python3 scripts/factory/notify.py push \
+            --title "$GATE_TITLE" --message "$GATE_MESSAGE" --priority "$GATE_PRIORITY" \
+            --tags "factory,raising_hand" \
+            --click "https://github.com/$GITHUB_REPOSITORY/issues/$GATE_ISSUE"
+
+      - name: Notify pause (no human action required)
+        if: steps.route.outputs.action == 'noop' && steps.route.outputs.notify_title != ''
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          PAUSE_TITLE: ${{ steps.route.outputs.notify_title }}
+          PAUSE_MESSAGE: ${{ steps.route.outputs.notify_message }}
+        run: |
+          python3 scripts/factory/notify.py push \
+            --title "$PAUSE_TITLE" --message "$PAUSE_MESSAGE" \
+            --priority "${{ steps.route.outputs.notify_priority }}" --tags "factory,pause_button"
+
+      # ---------------- Agent step path ----------------
+      - name: Checkout ticket branch for the agent
+        if: steps.route.outputs.action == 'run_agent'
+        env:
+          TICKET_BRANCH: ${{ steps.route.outputs.branch }}
+        run: |
+          git reset --hard HEAD
+          git clean -fdq .ai
+          if [ -n "$TICKET_BRANCH" ] && git show-ref --verify -q "refs/remotes/origin/$TICKET_BRANCH"; then
+            git checkout -B "$TICKET_BRANCH" "origin/$TICKET_BRANCH"
+            echo "Agent starts on ticket branch $TICKET_BRANCH."
+          else
+            echo "Ticket branch not on origin yet; agent starts on $DEFAULT_BRANCH and creates it per role rules."
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Run Claude agent step
+        id: claude
+        if: steps.route.outputs.action == 'run_agent' && steps.route.outputs.tool == 'claude'
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          MAX_TURNS: ${{ steps.route.outputs.claude_max_turns }}
+          ALLOWED_TOOLS: ${{ steps.route.outputs.claude_allowed_tools }}
+          CLAUDE_MODEL: ${{ steps.route.outputs.claude_model }}
+          CLAUDE_EXTRA_ARGS: ${{ steps.route.outputs.claude_extra_args }}
+        run: |
+          set +e
+          # Install inside the captured block: a registry/network failure must
+          # land on the agent-failure gate, not skip it by failing the step
+          # before the outcome output is written.
+          npm install -g @anthropic-ai/claude-code > "$RUNNER_TEMP/agent-err.log" 2>&1
+          if [ $? -ne 0 ]; then
+            echo "outcome=failed" >> "$GITHUB_OUTPUT"
+            echo "Claude CLI install failed:"
+            tail -c 2000 "$RUNNER_TEMP/agent-err.log"
+            exit 0
+          fi
+          # shellcheck disable=SC2086  # extra args are intentionally word-split
+          claude -p --output-format json --max-turns "$MAX_TURNS" \
+            ${ALLOWED_TOOLS:+--allowedTools "$ALLOWED_TOOLS"} \
+            ${CLAUDE_MODEL:+--model "$CLAUDE_MODEL"} \
+            $CLAUDE_EXTRA_ARGS \
+            "$(cat "$RUNNER_TEMP/factory-prompt.txt")" \
+            > "$RUNNER_TEMP/agent-out.json" 2> "$RUNNER_TEMP/agent-err.log"
+          STATUS=$?
+          set -e
+          tail -c 4000 "$RUNNER_TEMP/agent-err.log" || true
+          IS_ERROR=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(str(bool(d.get('is_error'))).lower())" "$RUNNER_TEMP/agent-out.json" 2>/dev/null || echo "true")
+          if [ "$STATUS" -eq 0 ] && [ "$IS_ERROR" = "false" ]; then
+            echo "outcome=ok" >> "$GITHUB_OUTPUT"
+          else
+            echo "outcome=failed" >> "$GITHUB_OUTPUT"
+            echo "Claude step failed (exit $STATUS, is_error=$IS_ERROR)."
+          fi
+
+      - name: Run Codex agent step (review pass 2)
+        id: codex
+        if: steps.route.outputs.action == 'run_agent' && steps.route.outputs.tool == 'codex'
+        env:
+          CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CODEX_EXEC_ARGS: ${{ steps.route.outputs.codex_exec_args }}
+        run: |
+          set +e
+          # Install inside the captured block (same rationale as the Claude step).
+          npm install -g @openai/codex > "$RUNNER_TEMP/agent-err.log" 2>&1
+          if [ $? -ne 0 ]; then
+            echo "outcome=failed" >> "$GITHUB_OUTPUT"
+            echo "Codex CLI install failed:"
+            tail -c 2000 "$RUNNER_TEMP/agent-err.log"
+            exit 0
+          fi
+          set -e
+          # Auth preference order (locked decision): ChatGPT-subscription
+          # auth.json first, metered OPENAI_API_KEY second. The dispatcher only
+          # routes here when one of them exists.
+          if [ -n "$CODEX_AUTH_JSON" ]; then
+            mkdir -p ~/.codex
+            printf '%s' "$CODEX_AUTH_JSON" > ~/.codex/auth.json
+            echo "Codex auth: ChatGPT subscription (CODEX_AUTH_JSON)."
+          elif [ -n "$OPENAI_API_KEY" ]; then
+            echo "Codex auth: OPENAI_API_KEY (metered)."
+          fi
+          set +e
+          # shellcheck disable=SC2086  # exec args are intentionally word-split
+          codex exec $CODEX_EXEC_ARGS "$(cat "$RUNNER_TEMP/factory-prompt.txt")" \
+            > "$RUNNER_TEMP/agent-out.json" 2> "$RUNNER_TEMP/agent-err.log"
+          STATUS=$?
+          set -e
+          tail -c 4000 "$RUNNER_TEMP/agent-err.log" || true
+          if [ "$STATUS" -eq 0 ]; then
+            echo "outcome=ok" >> "$GITHUB_OUTPUT"
+          else
+            echo "outcome=failed" >> "$GITHUB_OUTPUT"
+            echo "Codex step failed (exit $STATUS)."
+          fi
+
+      - name: Post-step bookkeeping (usage ledger, runtime, gates)
+        id: post
+        if: steps.route.outputs.action == 'run_agent' && (steps.claude.outputs.outcome == 'ok' || steps.codex.outputs.outcome == 'ok')
+        env:
+          TICKET: ${{ steps.route.outputs.ticket }}
+          ROLE: ${{ steps.route.outputs.role }}
+          TOOL: ${{ steps.route.outputs.tool }}
+          REASON: ${{ steps.route.outputs.reason }}
+        run: |
+          git fetch origin --prune
+          python3 scripts/factory/dispatch.py post-step \
+            --factory-file "$RUNNER_TEMP/factory-runtime.json" \
+            --tickets-dir .ai/tickets \
+            --ticket "$TICKET" --role "$ROLE" \
+            --tool "$([ "$TOOL" = "codex" ] && echo codex-cli || echo claude-code)" \
+            --workflow-event "factory_${REASON//-/_}" \
+            --agent-json "$RUNNER_TEMP/agent-out.json" \
+            --gate-body-file "$RUNNER_TEMP/factory-gate-body.md"
+          # Commit the usage entry only when we are sitting on the ticket
+          # branch (a state.json-only commit, covered by the review-record
+          # exemption). Finalized/merged tickets skip it by design.
+          CURRENT=$(git rev-parse --abbrev-ref HEAD)
+          if [ -n "$TICKET" ] && [ "$CURRENT" != "$DEFAULT_BRANCH" ] && \
+             [ -f ".ai/tickets/$TICKET/state.json" ] && \
+             ! git diff --quiet -- ".ai/tickets/$TICKET/state.json" && \
+             git show-ref --verify -q "refs/remotes/origin/$CURRENT"; then
+            git add ".ai/tickets/$TICKET/state.json"
+            git commit -m "chore(ticket): record $ROLE pass usage for $TICKET (factory)"
+            git push origin "HEAD:$CURRENT"
+          else
+            git checkout -- ".ai/tickets/$TICKET/state.json" 2>/dev/null || true
+            echo "Usage entry not committed (not on a pushed ticket branch); skipping per automation-first rule."
+          fi
+
+      - name: Validate state after agent step (fail closed)
+        id: validate
+        if: steps.route.outputs.action == 'run_agent' && (steps.claude.outputs.outcome == 'ok' || steps.codex.outputs.outcome == 'ok')
+        run: |
+          set +e
+          # An agent that edits files but fails to commit them — or commits
+          # but fails to push — violates its role contract: validation against
+          # work that exists only in this runner proves nothing (the next
+          # checkout starts from origin and would silently discard it).
+          DIRTY=$(git status --porcelain)
+          UNPUSHED=""
+          CURRENT=$(git rev-parse --abbrev-ref HEAD)
+          if [ "$CURRENT" = "HEAD" ]; then
+            UNPUSHED="workspace ended on a detached HEAD; agents must end on a pushed branch"
+          elif git show-ref --verify -q "refs/remotes/origin/$CURRENT"; then
+            AHEAD=$(git rev-list --count "origin/$CURRENT..HEAD")
+            if [ "$AHEAD" -gt 0 ]; then
+              UNPUSHED="$AHEAD local commit(s) on '$CURRENT' were never pushed to origin and would be lost"
+            fi
+          else
+            UNPUSHED="branch '$CURRENT' does not exist on origin; the agent's work was never pushed"
+          fi
+          {
+            if [ -n "$DIRTY" ]; then
+              echo "Agent left uncommitted changes in the worktree (fail closed):"
+              echo "$DIRTY"
+              echo ""
+            fi
+            if [ -n "$UNPUSHED" ]; then
+              echo "Agent left unpushed work (fail closed): $UNPUSHED"
+              echo ""
+            fi
+            python3 scripts/validate_ticket_state.py
+            TICKET_STATUS=$?
+            python3 scripts/check_workflow_docs.py
+            DOCS_STATUS=$?
+          } > "$RUNNER_TEMP/validator-out.log" 2>&1
+          set -e
+          cat "$RUNNER_TEMP/validator-out.log"
+          if [ -n "$DIRTY" ] || [ -n "$UNPUSHED" ] || [ "$TICKET_STATUS" -ne 0 ] || [ "$DOCS_STATUS" -ne 0 ]; then
+            echo "valid=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "valid=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Pause factory on invalid state
+        if: steps.validate.outputs.valid == 'false'
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          TICKET: ${{ steps.route.outputs.ticket }}
+        run: |
+          python3 scripts/factory/dispatch.py pause \
+            --factory-file "$RUNNER_TEMP/factory-runtime.json" --reason invalid_state
+          {
+            echo "The post-step validation failed (contract violation or uncommitted agent changes), so the factory paused itself (fail closed)."
+            echo "Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo ""
+            echo '```'
+            tail -c 6000 "$RUNNER_TEMP/validator-out.log"
+            echo '```'
+            echo ""
+            echo "Fix the state on the ticket branch, then comment \`/factory resume\` here."
+          } > "$RUNNER_TEMP/factory-gate-body.md"
+          python3 scripts/factory/notify.py needs-you \
+            --title "Factory paused: invalid state after agent step ($TICKET)" \
+            --message "Validators failed after the last agent step; the factory paused itself." \
+            --kind invalid_state \
+            --body-file "$RUNNER_TEMP/factory-gate-body.md" \
+            --record-runtime "$RUNNER_TEMP/factory-runtime.json"
+          python3 scripts/factory/notify.py push \
+            --title "Factory paused: invalid ticket state" \
+            --message "Validators failed after the last agent step on $TICKET. Fail closed." \
+            --priority urgent --tags "factory,rotating_light"
+
+      - name: Kick required checks on the ticket branch
+        # Pushes made with GITHUB_TOKEN do not trigger pull_request workflows,
+        # so the required PR checks would stay 'Expected' forever. Dispatch
+        # them explicitly on the branch head instead.
+        if: steps.validate.outputs.valid == 'true'
+        run: |
+          CURRENT=$(git rev-parse --abbrev-ref HEAD)
+          if git show-ref --verify -q "refs/remotes/origin/$CURRENT" && [ "$CURRENT" != "$DEFAULT_BRANCH" ]; then
+            gh workflow run workflow-docs-check.yml --ref "$CURRENT" || \
+              echo "Could not dispatch workflow-docs-check on $CURRENT (first run on a fresh repo is fine)."
+          fi
+          BRANCH_AFTER=$(python3 -c "import json; r=json.load(open('$RUNNER_TEMP/factory-runtime.json'))['runtime']; print(r.get('active_ticket_branch') or '')")
+          if [ -n "$BRANCH_AFTER" ] && [ "$BRANCH_AFTER" != "$CURRENT" ] && git show-ref --verify -q "refs/remotes/origin/$BRANCH_AFTER"; then
+            gh workflow run workflow-docs-check.yml --ref "$BRANCH_AFTER" || true
+          fi
+
+      - name: Notify gate the agent opened
+        if: steps.post.outputs.notify_title != '' && steps.post.outputs.duplicate_gate != 'true'
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          GATE_TITLE: ${{ steps.post.outputs.notify_title }}
+          GATE_MESSAGE: ${{ steps.post.outputs.notify_message }}
+        run: |
+          python3 scripts/factory/notify.py needs-you \
+            --title "$GATE_TITLE" --message "$GATE_MESSAGE" --kind waiting_human \
+            --body-file "$RUNNER_TEMP/factory-gate-body.md" \
+            --record-runtime "$RUNNER_TEMP/factory-runtime.json"
+          GATE_ISSUE=$(python3 -c "import json; print(json.load(open('$RUNNER_TEMP/factory-runtime.json'))['runtime'].get('gate_issue') or '')")
+          python3 scripts/factory/notify.py push \
+            --title "$GATE_TITLE" --message "$GATE_MESSAGE" --priority high \
+            --tags "factory,raising_hand" \
+            --click "https://github.com/$GITHUB_REPOSITORY/issues/$GATE_ISSUE"
+
+      - name: Close gate resolved by this step
+        if: steps.post.outputs.close_gate != ''
+        run: |
+          python3 scripts/factory/notify.py close-gate \
+            --issue "${{ steps.post.outputs.close_gate }}" \
+            --comment "The agent pass completed; nothing is waiting on you anymore."
+
+      - name: Handle agent failure (usage limits vs real failure)
+        if: steps.claude.outputs.outcome == 'failed' || steps.codex.outputs.outcome == 'failed'
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          DEFAULT_PAUSE_MINUTES: ${{ steps.route.outputs.default_pause_minutes }}
+          TICKET: ${{ steps.route.outputs.ticket }}
+        run: |
+          python3 scripts/factory/limits.py \
+            --log-file "$RUNNER_TEMP/agent-out.json" \
+            --log-file "$RUNNER_TEMP/agent-err.log" \
+            --default-pause-minutes "$DEFAULT_PAUSE_MINUTES" > "$RUNNER_TEMP/limits.json"
+          LIMIT=$(python3 -c "import json; print(str(json.load(open('$RUNNER_TEMP/limits.json'))['limit_detected']).lower())")
+          UNTIL=$(python3 -c "import json; print(json.load(open('$RUNNER_TEMP/limits.json'))['paused_until'])")
+          if [ "$LIMIT" = "true" ]; then
+            python3 scripts/factory/dispatch.py pause \
+              --factory-file "$RUNNER_TEMP/factory-runtime.json" \
+              --reason usage_limit --until "$UNTIL"
+            python3 scripts/factory/notify.py push \
+              --title "Factory paused: usage limit" \
+              --message "Subscription usage limit hit on $TICKET. Auto-resumes after $UNTIL (UTC)." \
+              --priority default --tags "factory,hourglass_flowing_sand"
+          else
+            python3 scripts/factory/dispatch.py pause \
+              --factory-file "$RUNNER_TEMP/factory-runtime.json" --reason agent_failure
+            {
+              echo "An agent step failed and the factory paused itself (fail closed)."
+              echo "Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+              echo ""
+              echo '```'
+              tail -c 6000 "$RUNNER_TEMP/agent-err.log" 2>/dev/null || true
+              echo '```'
+              echo ""
+              echo "Investigate, then comment \`/factory resume\` here to retry."
+            } > "$RUNNER_TEMP/factory-gate-body.md"
+            python3 scripts/factory/notify.py needs-you \
+              --title "Factory paused: agent step failed ($TICKET)" \
+              --message "An agent step failed; see the gate issue for the log tail." \
+              --kind agent_failure \
+              --body-file "$RUNNER_TEMP/factory-gate-body.md" \
+              --record-runtime "$RUNNER_TEMP/factory-runtime.json"
+            python3 scripts/factory/notify.py push \
+              --title "Factory paused: agent step failed" \
+              --message "Step on $TICKET failed. Comment /factory resume to retry." \
+              --priority high --tags "factory,rotating_light"
+          fi
+
+      # ---------------- Cycle close-out ----------------
+      - name: Refresh dashboard
+        if: always() && (steps.route.outputs.action == 'run_agent' || steps.route.outputs.action == 'needs_human' || steps.route.outputs.action == 'refresh_dashboard')
+        run: |
+          gh pr list --state open --json number,title,url > "$RUNNER_TEMP/prs.json" || printf '[]' > "$RUNNER_TEMP/prs.json"
+          python3 scripts/factory/notify.py dashboard \
+            --factory-file "$RUNNER_TEMP/factory-runtime.json" \
+            --tickets-dir .ai/tickets \
+            --pr-json "$RUNNER_TEMP/prs.json" || echo "Dashboard refresh failed (non-fatal)."
+
+      - name: Persist factory runtime state
+        if: always() && steps.route.outcome == 'success'
+        run: |
+          if cmp -s "$RUNNER_TEMP/factory-runtime.json" "$RUNNER_TEMP/factory-runtime-orig.json"; then
+            echo "Runtime state unchanged."
+            exit 0
+          fi
+          git worktree add "$RUNNER_TEMP/fstate" --detach "origin/factory-state" 2>/dev/null || \
+            git worktree add "$RUNNER_TEMP/fstate" --detach "origin/$DEFAULT_BRANCH"
+          cd "$RUNNER_TEMP/fstate"
+          mkdir -p .ai
+          cp "$RUNNER_TEMP/factory-runtime.json" .ai/factory.json
+          git add .ai/factory.json
+          if git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+               commit -m "factory: runtime state update"; then
+            git push origin HEAD:refs/heads/factory-state
+          fi
+
+      - name: Chain next factory step
+        # Only ticket routes chain: after a build-request architect run the new
+        # tickets sit on the spec PR branch until the human merges it, so an
+        # immediate next cycle would just open a misleading idle gate.
+        if: steps.validate.outputs.valid == 'true' && steps.route.outputs.ticket != ''
+        run: |
+          PAUSED=$(python3 -c "import json; r=json.load(open('$RUNNER_TEMP/factory-runtime.json'))['runtime']; print('yes' if (r.get('paused_until') or r.get('pause_reason')) else 'no')")
+          if [ "$PAUSED" = "no" ]; then
+            gh api "repos/$GITHUB_REPOSITORY/dispatches" -f event_type=factory-step
+            echo "Chained the next factory step."
+          else
+            echo "Factory is paused; not chaining."
+          fi
+
+      - name: Surface failure
+        if: always() && (steps.claude.outputs.outcome == 'failed' || steps.codex.outputs.outcome == 'failed' || steps.validate.outputs.valid == 'false')
+        run: |
+          echo "Factory step failed; see the gate issue and logs above."
+          exit 1

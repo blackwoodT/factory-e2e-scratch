@@ -1,0 +1,11 @@
+{
+  "event_name": "schedule",
+  "pr_approval_state": "approved",
+  "expected": {
+    "action": "run_agent",
+    "reason": "finalize",
+    "role": "orchestrator",
+    "ticket": "TKT-001"
+  },
+  "now": "2026-06-12T00:00:00Z"
+}

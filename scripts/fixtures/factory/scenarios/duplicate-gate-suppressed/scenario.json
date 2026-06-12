@@ -1,0 +1,10 @@
+{
+  "event_name": "schedule",
+  "repeat": true,
+  "expected": {
+    "action": "needs_human",
+    "reason": "waiting_human",
+    "duplicate_gate": true
+  },
+  "now": "2026-06-12T00:00:00Z"
+}

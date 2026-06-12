@@ -1,0 +1,17 @@
+{
+  "event_name": "schedule",
+  "expected": {
+    "action": "run_agent",
+    "reason": "planning",
+    "role": "orchestrator",
+    "ticket": "TKT-001",
+    "tool": "claude"
+  },
+  "expected_runtime": {
+    "paused_until": null,
+    "pause_reason": null,
+    "steps_today": 1,
+    "steps_date": "2026-06-12"
+  },
+  "now": "2026-06-12T00:00:00Z"
+}

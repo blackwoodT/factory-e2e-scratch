@@ -1,0 +1,11 @@
+{
+  "event_name": "repository_dispatch",
+  "expected": {
+    "action": "run_agent",
+    "reason": "fix_loop",
+    "role": "implementer",
+    "ticket": "TKT-001",
+    "tool": "claude"
+  },
+  "now": "2026-06-12T00:00:00Z"
+}

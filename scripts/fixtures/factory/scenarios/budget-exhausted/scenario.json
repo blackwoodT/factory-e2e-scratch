@@ -1,0 +1,13 @@
+{
+  "event_name": "repository_dispatch",
+  "expected": {
+    "action": "noop",
+    "reason": "budget_paused"
+  },
+  "expected_runtime": {
+    "paused_until": "2026-06-13T00:00:00Z",
+    "pause_reason": "daily_step_budget",
+    "steps_today": 40
+  },
+  "now": "2026-06-12T00:00:00Z"
+}

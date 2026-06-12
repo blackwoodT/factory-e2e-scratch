@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0",
+  "template_only": false,
+  "source_contract": "scripts/architecture/fixtures/structural-dependencies/README.md",
+  "description": "Fixture-only config that intentionally forbids interface -> storage so the self-test can prove violation reporting.",
+  "boundaries": [
+    {
+      "id": "interface",
+      "paths": ["project/interface/**"]
+    },
+    {
+      "id": "storage",
+      "paths": ["project/storage/**"]
+    }
+  ],
+  "dependency_patterns": [
+    {
+      "id": "fixture-depends-on-marker",
+      "regex": "^depends-on:\\s*(?P<target>.+)$"
+    }
+  ],
+  "allowed_edges": [
+    {
+      "id": "storage-may-not-reach-interface-example",
+      "from": "storage",
+      "to": "interface",
+      "reason": "Fixture-only example of an allowed edge in the opposite direction.",
+      "remediation": "This fixture should not need remediation; replace fixture rules in downstream projects."
+    }
+  ],
+  "forbidden_edges": [
+    {
+      "id": "fixture-interface-must-not-reach-storage",
+      "from": "interface",
+      "to": "storage",
+      "reason": "Fixture-only rule proving that configured structural dependency failures are detected.",
+      "remediation": "In a real project, move the dependency behind an allowed boundary or update the generated architecture contract and config if the policy changed."
+    }
+  ],
+  "ignored_dependencies": []
+}

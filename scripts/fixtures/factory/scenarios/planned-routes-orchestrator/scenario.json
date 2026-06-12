@@ -1,0 +1,16 @@
+{
+  "event_name": "workflow_dispatch",
+  "expected": {
+    "action": "run_agent",
+    "reason": "planning",
+    "role": "orchestrator",
+    "ticket": "TKT-001",
+    "pass_id": "",
+    "tool": "claude"
+  },
+  "expected_runtime": {
+    "active_ticket": "TKT-001",
+    "steps_today": 1
+  },
+  "now": "2026-06-12T00:00:00Z"
+}

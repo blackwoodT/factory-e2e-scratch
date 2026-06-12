@@ -1,0 +1,268 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "ticket-state.schema.json",
+  "title": "Harness ticket state (.ai/tickets/<ticket-id>/state.json)",
+  "description": "Machine-readable contract for ticket state. Enums here are the single source of truth: scripts/validate_ticket_state.py loads them at runtime, and editors can use this schema for autocomplete/validation. Keys starting with underscore are inline comments and are always allowed.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "ticket_id",
+    "ticket_type",
+    "title",
+    "branch",
+    "stage",
+    "next_actor",
+    "status",
+    "execution_mode",
+    "waiting_on",
+    "summary",
+    "validation",
+    "pull_request",
+    "review",
+    "handoff",
+    "history"
+  ],
+  "definitions": {
+    "stage": {
+      "enum": [
+        "planned",
+        "implementing",
+        "implemented",
+        "reviewing",
+        "changes_requested",
+        "review_accepted",
+        "finalized",
+        "blocked"
+      ]
+    },
+    "next_actor": {
+      "enum": [
+        "architect",
+        "orchestrator",
+        "implementer",
+        "reviewer",
+        "sec-reviewer",
+        "none",
+        null
+      ]
+    },
+    "ticket_status": {
+      "enum": ["active", "closed", "paused"]
+    },
+    "execution_mode": {
+      "enum": ["standard", "human_assisted"]
+    },
+    "waiting_on": {
+      "enum": [
+        "architect",
+        "orchestrator",
+        "implementer",
+        "reviewer",
+        "sec-reviewer",
+        "human",
+        "none"
+      ]
+    },
+    "ticket_type": {
+      "enum": ["primary", "prerequisite", "specialist"]
+    },
+    "specialist_type": {
+      "enum": ["ui", "a11y", "data", "perf", "sec", "infra", "test", "obs", "prereq"]
+    },
+    "specialist_agent": {
+      "enum": ["claude", "codex", "any"]
+    },
+    "validation_status": {
+      "enum": ["not_run", "in_progress", "passed", "passed_with_skips", "failed"]
+    },
+    "pull_request_status": {
+      "enum": ["not_created", "open", "changes_requested", "approved", "merged"]
+    },
+    "review_outcome": {
+      "enum": [
+        "pending",
+        "in_progress",
+        "changes_requested",
+        "accepted",
+        "accepted_with_follow_up"
+      ]
+    },
+    "pass_status": {
+      "enum": ["pending", "in_progress", "accepted", "changes_requested"]
+    },
+    "pass_outcome": {
+      "enum": [
+        "accepted",
+        "accepted_with_follow_up",
+        "approved",
+        "changes_requested",
+        null
+      ]
+    },
+    "handoff_role": {
+      "enum": [
+        "architect",
+        "orchestrator",
+        "implementer",
+        "reviewer",
+        "sec-reviewer",
+        "human",
+        "none"
+      ]
+    },
+    "ai_usage_source": {
+      "enum": [
+        "tool_reported",
+        "dashboard",
+        "manual",
+        "session_jsonl",
+        "estimated",
+        "not_available"
+      ]
+    },
+    "ai_usage_confidence": {
+      "enum": ["exact", "estimated", "partial", "unknown"]
+    },
+    "ai_usage_total_confidence": {
+      "enum": ["complete", "partial", "unknown"]
+    },
+    "required_pass": {
+      "type": "object",
+      "required": ["id", "tool", "status"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "tool": { "type": "string" },
+        "status": { "$ref": "#/definitions/pass_status" },
+        "head_sha": { "type": ["string", "null"] },
+        "outcome": { "$ref": "#/definitions/pass_outcome" },
+        "review_ref": { "type": ["string", "null"] },
+        "notes": { "type": "string" }
+      }
+    }
+  },
+  "properties": {
+    "schema_version": { "type": "string" },
+    "project": { "type": "string" },
+    "ticket_id": { "type": "string" },
+    "ticket_type": { "$ref": "#/definitions/ticket_type" },
+    "parent_ticket": { "type": ["string", "null"] },
+    "specialist": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": { "$ref": "#/definitions/specialist_type" },
+            "skill": { "type": "string" },
+            "agent": { "$ref": "#/definitions/specialist_agent" },
+            "reason": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "title": { "type": "string" },
+    "branch": { "type": "string" },
+    "repo_root": { "type": "string" },
+    "backlog_path": { "type": "string" },
+    "specification_path": { "type": "string" },
+    "stage": { "$ref": "#/definitions/stage" },
+    "next_actor": { "$ref": "#/definitions/next_actor" },
+    "status": { "$ref": "#/definitions/ticket_status" },
+    "execution_mode": { "$ref": "#/definitions/execution_mode" },
+    "waiting_on": { "$ref": "#/definitions/waiting_on" },
+    "summary": { "type": "string" },
+    "done_definition": { "type": "array", "items": { "type": "string" } },
+    "acceptance_criteria": { "type": "array", "items": { "type": "string" } },
+    "validation": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "required": { "type": "array" },
+        "contract": { "type": "object" },
+        "performed": { "type": "array" },
+        "evidence": { "type": "array" },
+        "status": { "$ref": "#/definitions/validation_status" },
+        "notes": { "type": "string" }
+      }
+    },
+    "notes_to_preserve_for_orchestrator": { "type": "array" },
+    "carry_forward_notes": { "type": "array" },
+    "deferred_follow_up": { "type": "array" },
+    "pull_request": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "number": { "type": ["integer", "null"] },
+        "url": { "type": ["string", "null"] },
+        "head_sha": { "type": ["string", "null"] },
+        "status": { "$ref": "#/definitions/pull_request_status" }
+      }
+    },
+    "review": {
+      "type": "object",
+      "required": ["outcome", "required_passes"],
+      "properties": {
+        "outcome": { "$ref": "#/definitions/review_outcome" },
+        "summary": { "type": "string" },
+        "risk_plan": { "type": "array" },
+        "fix_loop_count": { "type": "integer", "minimum": 0 },
+        "current_pass": { "type": ["string", "null"] },
+        "required_passes": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/required_pass" }
+        },
+        "findings": { "type": "array" },
+        "non_blocking_observations": { "type": "array" }
+      }
+    },
+    "handoff": {
+      "type": "object",
+      "required": ["from", "to"],
+      "properties": {
+        "from": { "$ref": "#/definitions/handoff_role" },
+        "to": { "$ref": "#/definitions/handoff_role" },
+        "reason": { "type": "string" }
+      }
+    },
+    "history": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["stage", "actor"],
+        "properties": {
+          "stage": { "$ref": "#/definitions/stage" },
+          "actor": { "type": "string" },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "prompt_handoff": { "type": "object" },
+    "ai_usage": {
+      "type": "object",
+      "properties": {
+        "schema_version": { "type": "string" },
+        "currency": { "type": "string" },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "workflow_event": { "type": "string" },
+              "actor": { "type": "string" },
+              "tool": { "type": "string" },
+              "source": { "$ref": "#/definitions/ai_usage_source" },
+              "confidence": { "$ref": "#/definitions/ai_usage_confidence" }
+            }
+          }
+        },
+        "ticket_total_tokens": { "type": "number" },
+        "ticket_total_estimated_usd": { "type": "number" },
+        "ticket_total_confidence": { "$ref": "#/definitions/ai_usage_total_confidence" },
+        "prices_as_of": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

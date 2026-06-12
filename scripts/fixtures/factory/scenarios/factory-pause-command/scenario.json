@@ -1,0 +1,22 @@
+{
+  "event_name": "issue_comment",
+  "event": {
+    "comment": {
+      "body": "/factory pause",
+      "author_association": "OWNER"
+    },
+    "issue": {
+      "number": 30,
+      "state": "open",
+      "labels": []
+    }
+  },
+  "expected": {
+    "action": "noop",
+    "reason": "command_pause"
+  },
+  "expected_runtime": {
+    "pause_reason": "manual_pause"
+  },
+  "now": "2026-06-12T00:00:00Z"
+}

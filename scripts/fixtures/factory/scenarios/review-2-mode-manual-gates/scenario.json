@@ -1,0 +1,10 @@
+{
+  "event_name": "repository_dispatch",
+  "review2_available": true,
+  "expected": {
+    "action": "needs_human",
+    "reason": "review2_manual",
+    "ticket": "TKT-001"
+  },
+  "now": "2026-06-12T00:00:00Z"
+}

@@ -1,0 +1,8 @@
+{
+  "event_name": "schedule",
+  "expected": {
+    "action": "noop",
+    "reason": "disabled"
+  },
+  "now": "2026-06-12T00:00:00Z"
+}

@@ -1,0 +1,11 @@
+{
+  "event_name": "repository_dispatch",
+  "expected": {
+    "action": "run_agent",
+    "role": "sec-reviewer",
+    "pass_id": "security-review",
+    "tool": "claude",
+    "ticket": "TKT-004"
+  },
+  "now": "2026-06-12T00:00:00Z"
+}

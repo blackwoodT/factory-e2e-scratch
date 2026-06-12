@@ -1,0 +1,7 @@
+# Local Agent QA evidence artifacts. Keep logs/screenshots/traces out of commits
+# unless a ticket explicitly asks for a sanitized artifact fixture.
+.ai/qa-artifacts/
+
+# Python bytecode caches (e.g. from running the harness/factory scripts locally).
+__pycache__/
+*.pyc

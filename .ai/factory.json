@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "_purpose": "Configuration + runtime state for the automated factory loop (docs/workflow/automation.md). The template ships with enabled=false; enabling is a per-project step. In an armed project the workflows persist the mutable `runtime` block on the unprotected `factory-state` branch, never on protected main.",
+  "enabled": false,
+  "limits": {
+    "max_steps_per_day": 40,
+    "fix_loop_threshold": 3,
+    "default_pause_minutes": 90,
+    "claude_max_turns": 60,
+    "claude_model": "",
+    "claude_allowed_tools": "Bash,Edit,MultiEdit,Write,Read,Glob,Grep,WebFetch,WebSearch,TodoWrite,Task",
+    "claude_extra_args": "",
+    "codex_exec_args": "--full-auto"
+  },
+  "review_2": {
+    "mode": "auto",
+    "_modes": "auto = Codex when CODEX_AUTH_JSON or OPENAI_API_KEY is configured, else a manual phone gate; set to 'manual' to force the manual gate"
+  },
+  "notifications": {
+    "ntfy_enabled": true,
+    "_topic": "The ntfy topic comes from the NTFY_TOPIC secret, never from this file"
+  },
+  "runtime": {
+    "_comment": "Mutable loop state written by scripts/factory/dispatch.py; do not hand-edit except to recover.",
+    "paused_until": null,
+    "pause_reason": null,
+    "active_ticket": null,
+    "active_ticket_branch": null,
+    "steps_date": null,
+    "steps_today": 0,
+    "gate_fingerprint": null,
+    "gate_issue": null,
+    "last_step": null
+  }
+}
