@@ -28,8 +28,8 @@
     "active_ticket_branch": null,
     "steps_date": null,
     "steps_today": 0,
-    "gate_fingerprint": null,
-    "gate_issue": null,
+    "gate_fingerprint": "-|idle|-",
+    "gate_issue": 2,
     "last_step": null
   }
 }
